@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <meta charset="UTF-8" />
+  <title>Создание тура</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <style>
+    #airlineModal {
+      display: none;
+      position: fixed;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 20px 30px;
+      z-index: 1000;
+      width: 400px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+      border-radius: 6px;
+    }
+  
+    #airlineModal label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+  
+    #airlineModal input {
+      width: 100%;
+      padding: 6px 8px;
+      margin-top: 4px;
+      box-sizing: border-box;
+    }
+  
+    #airlineModal button[type="submit"] {
+      margin-top: 12px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+  
+    #modalBackdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+    }
+
+    .btn-outline-primary {
+    min-width: 180px;
+    white-space: nowrap;
+  }
+
+  #flightModal form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 400px;
+  }
+  #flightModal label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #flightModal label input,
+  #flightModal label select {
+    margin-left: 10px;
+    flex-grow: 1;
+  }
+  #flightForm button {
+    height: 38px;
+    padding: 6px 16px;
+    cursor: pointer;
+  }
+  #cancelFlight {
+    margin-left: 5px;
+  }
+
+  </style>
+
+</head>
+<body>
+  <div class="container my-5">
+    <h1 class="mb-4">Создать новый тур</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+      {{ form.hidden_tag() }}
+  
+      <div class="mb-3">
+        {{ form.name.label(class="form-label") }}
+        {{ form.name(class="form-control", id="name", placeholder="Введите название тура", required=True) }}
+        <div class="invalid-feedback">Пожалуйста, введите название тура.</div>
+      </div>
+  
+      <div class="mb-3">
+        {{ form.city.label(class="form-label") }}
+        <div class="input-group">
+          {{ form.city(class="form-select", id="city", required=True) }}
+          <button type="button" class="btn btn-outline-primary" id="openCityModal">Добавить новый город</button>
+        </div>
+        <div class="invalid-feedback">Пожалуйста, выберите город.</div>
+      </div>
+  
+      <div class="mb-3">
+        {{ form.duration.label(class="form-label") }}
+        {{ form.duration(class="form-control", id="duration", placeholder="Длительность (дней)", required=True) }}
+        <div class="invalid-feedback">Пожалуйста, введите длительность тура.</div>
+      </div>
+  
+      <div class="mb-3">
+        {{ form.date.label(class="form-label") }}
+        {{ form.date(class="form-control", id="date", required=True) }}
+        <div class="invalid-feedback">Пожалуйста, выберите дату.</div>
+      </div>
+  
+      <div class="mb-3">
+        {{ form.price.label(class="form-label") }}
+        {{ form.price(class="form-control", id="price", placeholder="Цена тура", required=True, step="0.01", min="0") }}
+        <div class="invalid-feedback">Пожалуйста, введите цену тура.</div>
+      </div>
+  
+      <div class="mb-3">
+        {{ form.excursions.label(class="form-label") }}
+        <div class="d-flex gap-2">
+          {{ form.excursions(class="form-select", id="excursions", size=5, multiple=True, required=True, style="flex-grow:1;") }}
+          <button type="button" class="btn btn-outline-primary" id="openExcursionModal">Добавить экскурсию</button>
+        </div>
+        <div id="excursion-info-container" class="mt-2"></div>
+        <div class="invalid-feedback d-block" style="display:none;">Пожалуйста, выберите хотя бы одну экскурсию.</div>
+      </div>
+  
+      <div class="mb-3">
+        {{ form.hotels.label(class="form-label") }}
+        <div class="d-flex gap-2">
+          {{ form.hotels(class="form-select", id="hotels", size=5, multiple=True, required=True, style="flex-grow:1;") }}
+          <button type="button" class="btn btn-outline-primary" id="openHotelModal">Добавить отель</button>
+        </div>
+        <div class="invalid-feedback d-block" style="display:none;">Пожалуйста, выберите хотя бы один отель.</div>
+      </div>
+  
+      <div class="mb-3">
+        {{ form.rooms.label(class="form-label") }}
+        <div class="d-flex gap-2">
+          {{ form.rooms(class="form-select", id="rooms", size=5, multiple=True, required=True, style="flex-grow:1;") }}
+          <button type="button" class="btn btn-outline-primary" id="openRoomModal">Добавить комнату</button>
+        </div>
+        <div class="invalid-feedback d-block" style="display:none;">Пожалуйста, выберите хотя бы одну комнату.</div>
+      </div>
+  
+      <div class="mb-3">
+        {{ form.airline.label(class="form-label") }}
+        <div class="input-group">
+          {{ form.airline(class="form-select", id="airline", required=True) }}
+          <button type="button" class="btn btn-outline-primary" id="openAirlineModal">Добавить авиакомпанию</button>
+        </div>
+        <div class="invalid-feedback">Пожалуйста, выберите авиакомпанию.</div>
+      </div>
+  
+      <div class="mb-3">
+        {{ form.flights.label(class="form-label") }}
+        <div class="d-flex gap-2">
+          {{ form.flights(class="form-select", id="flights", size=5, multiple=True, required=True, style="flex-grow:1;") }}
+          <button type="button" class="btn btn-outline-primary" id="openFlightModal">Добавить авиабилет</button>
+        </div>
+        <div id="flight-info-container" class="mt-2"></div>
+        <div class="invalid-feedback d-block" style="display:none;">Пожалуйста, выберите хотя бы один авиабилет.</div>
+      </div>
+  
+      <div class="mb-3">
+        <label for="tour_images" class="form-label">Изображения тура</label>
+        <input type="file" name="tour_images" id="tour_images" multiple accept="image/*" class="form-control">
+        <div id="preview-container" class="d-flex flex-wrap gap-2 mt-2"></div>
+      </div>
+  
+      <button type="submit" class="btn btn-primary">Создать тур</button>
+    </form>
+  </div>
+
+<!-- Модальное окно создания экскурсии -->
+<div id="excursionModal" style="display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%);
+    background:#fff; border:1px solid #ccc; padding:20px; z-index:1000; width:400px;">
+  <h3>Создать новую экскурсию</h3>
+  <form id="excursionForm">
+    <p><label>Название экскурсии<br><input type="text" name="name" required></label></p>
+    <p><label>Гид<br><input type="text" name="guide"></label></p>
+    <p><label>Маршрут<br><textarea name="route"></textarea></label></p>
+    <p><label>Дата<br><input type="date" name="date" value="{{ datetime.date.today() }}"></label></p>
+    <p><label>Цена<br><input type="number" step="0.01" name="price"></label></p>
+    <div class="modal-buttons">
+      <button type="submit">Создать экскурсию</button>
+      <button type="button" id="cancelExcursion">Отмена</button>
+    </div>
+  </form>
+</div>
+
+<!-- Модальное окно создания города -->
+<div id="cityModal" style="display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%);
+    background:#fff; border:1px solid #ccc; padding:20px; z-index:1000; width:300px;">
+  <h3>Создать новый город</h3>
+  <form id="cityForm">
+    <p><label>Название города<br><input type="text" name="name" required></label></p>
+    <div class="modal-buttons">
+      <button type="submit">Создать город</button>
+      <button type="button" id="cancelCity">Отмена</button>
+    </div>
+  </form>
+</div>
+
+<!-- Модальное окно создания отеля -->
+<div id="hotelModal" style="display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%);
+    background:#fff; border:1px solid #ccc; padding:20px; z-index:1000; width:350px;">
+  <h3>Создать новый отель</h3>
+  <form id="hotelForm">
+    <p>
+      <label>Название отеля:<br>
+        <input type="text" name="name" required>
+      </label>
+    </p>
+    <p>
+      <label>Количество звёзд:<br>
+        <input type="number" name="stars" min="1" max="5" required>
+      </label>
+    </p>
+    <input type="hidden" name="city_id">
+    <div class="modal-buttons">
+      <button type="submit">Создать</button>
+      <button type="button" id="cancelHotel">Отмена</button>
+    </div>
+  </form>
+</div>
+
+<!-- Модальное окно создания комнаты -->
+<div id="roomModal" style="display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%);
+    background:#fff; border:1px solid #ccc; padding:20px; z-index:1000; width:350px;">
+  <h3>Создать новую комнату</h3>
+  <form id="roomForm">
+    <input type="hidden" name="hotel_id" value="">
+    <p>
+      <label>Название комнаты:<br>
+        <input name="name" required>
+      </label>
+    </p>
+    <p>
+      <label>Тип комнаты:<br>
+        <input name="type" required>
+      </label>
+    </p>
+    <p>
+      <label>Цена:<br>
+        <input name="price" type="number" step="0.01" min="0" required>
+      </label>
+    </p>
+    <div class="modal-buttons">
+      <button type="submit">Создать комнату</button>
+      <button type="button" id="cancelRoom">Отмена</button>
+    </div>
+  </form>
+</div>
+
+<!-- Модальное окно создания авиакомпании -->
+<div id="airlineModal" style="display:none;">
+  <form id="airlineForm">
+    <label>Название:
+      <input type="text" name="name" required>
+    </label>
+    <label>Страна:
+      <input type="text" name="country" required>
+    </label>
+    <label>IATA код (2 символа):
+      <input type="text" name="iata_code" maxlength="2" required>
+    </label>
+    <label>ICAO код (3 символа):
+      <input type="text" name="icao_code" maxlength="3" required>
+    </label>
+    <div class="modal-buttons">
+      <button type="submit">Создать</button>
+      <button type="button" id="cancelAirline">Отмена</button>
+    </div>
+  </form>
+</div>
+    <!-- Модальное окно создания авиабилета -->
+    <div id="flightModal" style="display: none; position: fixed; top: 10%; left: 30%; background: white; padding: 20px; border: 1px solid #ccc; z-index: 1000;">
+      <form id="flightForm">
+        <label>Название:
+          <input type="text" name="name" required>
+        </label>
+        
+        <label>Город отправления:
+          <select name="from_city" required>
+            <option value="">Выберите город отправления</option>
+            {% for city in cities %}
+              <option value="{{ city.CityID }}">{{ city.Name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        
+        <label>Город назначения:
+          <input type="text" id="to_city_input" name="to_city" readonly>
+        </label>
+        
+        <label>Дата:
+          <input type="date" name="date" required>
+        </label>
+        
+        <label>Время вылета:
+          <input type="time" name="departure_time" required>
+        </label>
+        
+        <label>Время прибытия:
+          <input type="time" name="arrival_time" required>
+        </label>
+        
+        <label>Цена билета:
+          <input type="number" name="ticket_price" step="0.01" required>
+        </label>
+        
+        <label>Авиакомпания:
+          <select name="airline_id" required>
+            {% for airline in airlines %}
+              <option value="{{ airline.AirlineID }}">{{ airline.Name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        
+        <button type="submit">Создать</button>
+        <button type="button" id="cancelFlight">Отмена</button>
+      </form>
+    </div>
+
+
+  <!-- Фон для модальных окон -->
+  <div id="modalBackdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; opacity:0.5; z-index:999;"></div>
+
+  <script>
+    const excursionCreateUrl = "{{ url_for('create_excursion_ajax') }}";
+    const cityCreateUrl = "{{ url_for('create_city_ajax') }}"; 
+    const hotelCreateUrl = "{{ url_for('create_hotel_modal') }}";
+    const roomCreateUrl = "{{ url_for('create_room') }}";
+  </script>
+
+  <!-- Подключаем JS с логикой динамической подгрузки и обработчиками -->
+  <script src="{{ url_for('static', filename='js/tour_form.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
